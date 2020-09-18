@@ -10,6 +10,16 @@
 #include <net/if.h>
 #endif
 
+//Mac OS sockets
+#if __APPLE__
+#ifndef SOCK_NONBLOCK
+#include <fcntl.h>
+#define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
+#define MSG_NOSIGNAL 0x2000 /* don't raise SIGPIPE */
+#endif	// __APPLE__
+
 RudpRetCode rudp_client_open(rudp_client_open_param_t *param, void **rudp_connect_out)
 {
     if (!param || !param->ev_base || !rudp_connect_out)
@@ -33,6 +43,7 @@ RudpRetCode rudp_client_open(rudp_client_open_param_t *param, void **rudp_connec
 #endif
 
 #ifndef BUILD_APP
+    /*
     if (strlen(param->interfaces) > 0)
     {
         //bind interface
@@ -47,6 +58,7 @@ RudpRetCode rudp_client_open(rudp_client_open_param_t *param, void **rudp_connec
             return RudpRet_INTERFACE_ERROR;
         }
     }
+    */
 #endif
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));

@@ -132,7 +132,7 @@ typedef struct
     int lost_network_remote;
     rudp_stream_t *stream[RUDP_STREAM_COUNT];
 
-#ifndef WIN32
+#if !(defined(WIN32) || defined(__APPLE__) || defined(__MACOS__))
     struct mmsghdr udp_msgs[RUDP_UDP_VLEN];
     struct iovec udp_iovecs[RUDP_UDP_VLEN];
     char udp_bufs[RUDP_UDP_VLEN][RUDP_UDP_BUFSIZE];

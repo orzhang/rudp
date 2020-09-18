@@ -7,8 +7,22 @@
 #include <time.h>
 #ifndef WIN32
 #include <unistd.h>
-#include <endian.h>
+//#include <endian.h>
 #endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifndef WIN32
+#include <unistd.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#endif
+
+#include <event2/event.h>
+
 /*
 **数据发送的协议：协议头(1Byte)+FEC头(如果开启FEC)+RUDP头(如果不是RAW UDP)+数据内容
 **其中1Byte协议头，第一位代表是否是Cmd，1代表cmd，0代表data；第二位代表是否是RAW UDP，1代表是，0代表否；第三位代表是否开启FEC，1代表开启，0代表关闭；
@@ -715,6 +729,7 @@ void mtu_probe_send(rudp_connect_t *rudp_connect, int length, int is_request)
     socklen_t optlen = sizeof(int);
     int val_old = 0;
     int val_new = IP_PMTUDISC_DO;
+    IP_HDRINCL
     getsockopt(rudp_connect->sock, IPPROTO_IP, IP_MTU_DISCOVER, &val_old, &optlen);
     setsockopt(rudp_connect->sock, IPPROTO_IP, IP_MTU_DISCOVER, &val_new, sizeof(val_new));
     udp_output_cmd(rudp_connect, send_buffer, send_len);
@@ -1476,7 +1491,7 @@ void on_connect_recv(evutil_socket_t fd, short events, void *arg)
         }
         rudp_connect->delete_flag = 0;
 
-#ifndef WIN32
+#if !(defined(WIN32) || defined(__APPLE__) || defined(__MACOS__))
         retval = recvmmsg(fd, rudp_connect->udp_msgs, RUDP_UDP_VLEN, 0, NULL);
         if (retval <= 0)
         {
@@ -1724,7 +1739,7 @@ RudpRetCode rudp_connect_start(rudp_connect_t *rudp_connect)
     memset(rudp_connect->fec_send_buffers, 0, RUDP_UDP_BUFSIZE * RUDP_FEC_TOTAL_BUF);
     memset(rudp_connect->fec_recv_buffers, 0, RUDP_UDP_BUFSIZE * RUDP_FEC_TOTAL_BUF);
 
-#ifndef WIN32
+#if !(defined(WIN32) || defined(__APPLE__) || defined(__MACOS__))
     //init struct mmsghdr
     int i = 0;
     memset(rudp_connect->udp_msgs, 0, sizeof(rudp_connect->udp_msgs));

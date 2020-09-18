@@ -15,6 +15,15 @@
 
 #include <event2/event.h>
 
+//Mac OS sockets
+#if __APPLE__
+#ifndef SOCK_NONBLOCK
+#include <fcntl.h>
+#define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
+#define MSG_NOSIGNAL 0x2000 /* don't raise SIGPIPE */
+#endif	// __APPLE__
 typedef struct
 {
     int sock;
@@ -26,7 +35,7 @@ typedef struct
 
     on_accept_t on_accept;
 
-#ifndef WIN32
+#if !(defined(WIN32) || defined(__APPLE__) || defined(__MACOS__))
     struct mmsghdr udp_msgs[RUDP_UDP_VLEN];
     struct iovec udp_iovecs[RUDP_UDP_VLEN];
     char udp_bufs[RUDP_UDP_VLEN][RUDP_UDP_BUFSIZE];
@@ -140,7 +149,7 @@ void on_server_recv(evutil_socket_t fd, short events, void *arg)
 
     while (1)
     {
-#ifndef WIN32
+#if !(defined(WIN32) || defined(__APPLE__) || defined(__MACOS__))
         int retval = recvmmsg(fd, rudp_server->udp_msgs, RUDP_UDP_VLEN, 0, NULL);
         if (retval <= 0)
         {
@@ -206,7 +215,8 @@ void *rudp_server_open(rudp_server_open_param_t *param)
     }
 
     int opt = 1;
-    setsockopt(sock, SOL_IP, IP_RECVORIGDSTADDR, &opt, sizeof(opt));
+    //setsockopt(sock, SOL_IP, IP_RECVORIGDSTADDR, &opt, sizeof(opt));
+    setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &opt, sizeof(opt));
 #else
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == INVALID_SOCKET)
@@ -259,7 +269,7 @@ void *rudp_server_open(rudp_server_open_param_t *param)
 
     rudp_server->ev_reader = ev_reader;
 
-#ifndef WIN32
+#if !(defined(WIN32) || defined(__APPLE__) || defined(__MACOS__))
     //init struct mmsghdr
     int i = 0;
     memset(rudp_server->udp_msgs, 0, sizeof(rudp_server->udp_msgs));
